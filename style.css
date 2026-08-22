@@ -1,0 +1,26 @@
+*{box-sizing:border-box}
+body{margin:0;padding:45px 20px;background:#f4f6f8;color:#202124;font-family:Arial,Helvetica,sans-serif}
+.container{width:100%;max-width:850px;margin:0 auto}
+h1{text-align:center;margin:0;font-size:31px}
+.subtitle{text-align:center;color:#777;margin:8px 0 35px}
+.week{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;margin-bottom:14px;background:#fff;border:1px solid #ddd;border-radius:12px;color:#222;text-decoration:none;box-shadow:0 2px 7px rgba(0,0,0,.05);transition:.15s}
+.week:hover{transform:translateY(-2px);border-color:#2563eb}
+.week span{font-size:18px;font-weight:700}.week small{color:#666}
+.back{display:inline-block;margin-bottom:22px;color:#2563eb;text-decoration:none;font-weight:600}
+.week-header{margin-bottom:25px}.week-header h1{margin-bottom:10px}
+.stats{text-align:center;color:#666;font-size:14px}
+.progress{height:8px;background:#e5e7eb;border-radius:20px;overflow:hidden;margin-top:12px}
+.progress-bar{height:100%;width:0;background:#22c55e}
+.question{background:#fff;padding:18px 20px;margin-bottom:14px;border-radius:10px;border:1px solid #ddd;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.question.solved{border-color:#b7e4c7;background:#fbfffc}
+.question[data-status="review"]{border-color:#fde68a;background:#fffdf6}
+.question input{width:17px;height:17px;vertical-align:middle;cursor:pointer}
+.question a{margin-left:8px;color:#2563eb;font-size:18px;font-weight:700;text-decoration:none}
+.question a:hover{text-decoration:underline}
+.rating{display:inline-block;margin-left:10px;padding:3px 8px;border-radius:20px;background:#eef2ff;color:#4f46e5;font-size:12px;font-weight:700}
+.tag{display:inline-block;margin-left:6px;padding:3px 8px;border-radius:20px;background:#f1f3f5;color:#777;font-size:11px;font-weight:700;font-family:"Courier New",monospace}
+.question p{margin:12px 0 0 28px;color:#555;line-height:1.6;white-space:pre-line}
+.status{display:block;margin:8px 0 0 28px;color:#777;font-size:12px}
+.question.solved .status{color:#15803d;font-weight:700}
+.question[data-status="review"] .status{color:#b45309;font-weight:700}
+@media(max-width:600px){body{padding:28px 12px}h1{font-size:24px}.week span{font-size:16px}.question a{font-size:16px}.rating,.tag{display:block;width:max-content;margin:8px 0 0 28px}}
