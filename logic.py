@@ -10,7 +10,7 @@ WEEKS = ROOT / "weeks"
 
 
 def set_status_attr(block, status):
-    """Set data-status="solved"/"review" on the block's outer div, whether
+    """Set data-status="solved"/"help"/"review" on the block's outer div, whether
     or not it already had the attribute (older entries won't)."""
     if 'data-status="' in block:
         return re.sub(r'data-status="[^"]*"', f'data-status="{status}"', block, count=1)
@@ -95,9 +95,18 @@ def main():
         print("No logic entered. Nothing changed.")
         return
 
+    old_p_match = re.search(r"<p>(.*?)</p>", selected["block"], re.S)
+    old_text = unescape(old_p_match.group(1)).strip() if old_p_match else ""
+    placeholder = "Write your logic here..."
+
+    if old_text and old_text != placeholder:
+        combined = old_text + "\n\n---\n\n" + logic
+    else:
+        combined = logic
+
     new_block = re.sub(
         r"<p>.*?</p>",
-        "<p>\n            " + escape(logic).replace("\n", "\n            ") + "\n        </p>",
+        "<p>\n            " + escape(combined).replace("\n", "\n            ") + "\n        </p>",
         selected["block"], count=1, flags=re.S
     )
 
@@ -106,12 +115,23 @@ def main():
         if rating:
             new_block = new_block.replace("</a>", f'</a> <span class="rating">{escape(rating)}</span>', 1)
 
-    solved = input("\nDid you solve it yourself? (y/n): ").strip().lower()
+    print("\nHow did it go?")
+    print("  1. Solved it myself")
+    print("  2. Solved with help (hint / editorial / AI / friend)")
+    print("  3. Not solved yet")
+    choice = input("Choose 1/2/3: ").strip()
 
-    if solved == "y":
+    # normalize checkbox first so re-editing a question doesn't duplicate "checked"
+    new_block = re.sub(r'<input type="checkbox"[^>]*>', '<input type="checkbox">', new_block, count=1)
+
+    if choice == "1":
         new_block = new_block.replace('<input type="checkbox">', '<input type="checkbox" checked>', 1)
         new_block = re.sub(r'<span class="status">.*?</span>', '<span class="status">SOLVED</span>', new_block, count=1, flags=re.S)
         new_block = set_status_attr(new_block, "solved")
+    elif choice == "2":
+        new_block = new_block.replace('<input type="checkbox">', '<input type="checkbox" checked>', 1)
+        new_block = re.sub(r'<span class="status">.*?</span>', '<span class="status">SOLVED WITH HELP</span>', new_block, count=1, flags=re.S)
+        new_block = set_status_attr(new_block, "help")
     else:
         new_block = re.sub(r'<span class="status">.*?</span>', '<span class="status">REVIEW</span>', new_block, count=1, flags=re.S)
         new_block = set_status_attr(new_block, "review")
