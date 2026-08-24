@@ -81,7 +81,8 @@ def main():
 
     original = selected["block"]
     print(f"\nSelected: {selected['name']}")
-    print("\nWrite your logic. Type END on a new line when finished:\n")
+    print('Write your logic. Type END on a new line when finished.')
+    print('(Or type CLEAR alone and press END to wipe existing logic.)\n')
 
     lines = []
     while True:
@@ -90,19 +91,24 @@ def main():
             break
         lines.append(line)
 
-    logic = "\n".join(lines).strip()
-    if not logic:
-        print("No logic entered. Nothing changed.")
-        return
-
-    old_p_match = re.search(r"<p>(.*?)</p>", selected["block"], re.S)
-    old_text = unescape(old_p_match.group(1)).strip() if old_p_match else ""
     placeholder = "Write your logic here..."
 
-    if old_text and old_text != placeholder:
-        combined = old_text + "\n\n---\n\n" + logic
+    if lines == ["CLEAR"]:
+        combined = placeholder
+        print("\n✓ Logic cleared.")
     else:
-        combined = logic
+        logic = "\n".join(lines).strip()
+        if not logic:
+            print("No logic entered. Nothing changed.")
+            return
+
+        old_p_match = re.search(r"<p>(.*?)</p>", selected["block"], re.S)
+        old_text = unescape(old_p_match.group(1)).strip() if old_p_match else ""
+
+        if old_text and old_text != placeholder:
+            combined = old_text + "\n\n---\n\n" + logic
+        else:
+            combined = logic
 
     new_block = re.sub(
         r"<p>.*?</p>",
