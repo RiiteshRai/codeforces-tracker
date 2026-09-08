@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WEEK - Codeforces</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<div class="container">
+<a class="back" href="../index.html">← Back to weeks</a>
+<div class="week-header">
+<h1>DATE - DATE</h1>
+<div class="stats"><span id="solved">0</span> / <span id="total">0</span> solved
+<div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+</div>
+</div>
+<!-- Problems are added automatically by add.py -->
+<div class="question" data-status="not-solved">
+<input type="checkbox">
+<a href="https://codeforces.com/problemset/problem/2204/D" target="_blank">Alternating Path</a> <span class="rating">1400</span> <span class="tag">2204D</span>
+<p>Write your logic here...</p>
+<span class="status">NOT SOLVED</span>
+</div>
+
+</div>
+<script>
+const q=document.querySelectorAll(".question");
+const s=document.querySelectorAll(".question input:checked").length;
+document.getElementById("total").textContent=q.length;
+document.getElementById("solved").textContent=s;
+document.getElementById("progress-bar").style.width=(q.length?s/q.length*100:0)+"%";
+q.forEach(x=>{const b=x.querySelector("input");if(b.checked)x.classList.add("solved");b.addEventListener("change",()=>x.classList.toggle("solved",b.checked));});
+</script>
+</body>
+</html>
