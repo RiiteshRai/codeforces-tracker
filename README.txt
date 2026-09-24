@@ -1,46 +1,25 @@
-CODEFORCES WEEKLY TRACKER
+CODEFORCES TRACKER  (Easy / Medium / Hard / Contests)
 
-Same three separate commands as before - each does one job:
+Sections: easy, medium, hard, contests
 
-CREATE WEEK:
-    python newweek.py
+ADD PROBLEMS (easy / medium / hard):
+    python add.py easy
+Paste a problem URL - name and rating are fetched automatically.
+Type done when finished. A problem can't be added twice across ANY section.
 
-ADD PROBLEMS:
-    python add.py week1
+ADD A CONTEST:
+    python add.py contests
+Type just the contest number (e.g. 2030). Type done when finished.
 
-It now only asks for:
-    URL
-
-The problem name and rating are fetched automatically from the
-Codeforces API. You only get asked to type a name/rating yourself if
-the auto-lookup fails (this basically only happens for gym problems,
-or if you're offline).
-
-Type done when finished.
-
-WRITE LOGIC / SOLVE:
-    python logic.py week1
-
-Choose by:
-    number
-    problem name
-    URL
-    or the short tag shown next to each problem (e.g. 1985F)
-
-Write logic, then type:
-    END
-
-Then answer:
-    y = solved + checkbox saved
-    n = review
+WRITE LOGIC / UPDATE STATUS:
+    python logic.py easy
+    python logic.py contests
+Choose by number, name, URL, tag (e.g. 1985F) - or contest number.
+Contests: you are first asked for the problem URL (name/rating auto-fetched),
+then the logic. Press Enter to skip either. Write logic, then type END.
+Finally choose: 1 solved / 2 solved with help / 3 not solved (review).
 
 OTHER:
-- Closing the terminal does not lose already-added problems.
-- add.py prevents the same problem being added twice, even if you
-  paste the link in a different form (contest/... vs problemset/...).
-- cf_cache.json is created automatically to speed up repeated lookups
-  in add.py - safe to delete anytime, it just rebuilds itself.
-- index.html lists all weeks.
-- style.css controls the design. Problems marked for revision (n) now
-  get a distinct amber highlight so they stand out from unsolved ones.
-- No database/server/login is required.
+- sync.py pushes everything to GitHub.
+- cf_cache.json is auto-created and safe to delete.
+- style.css controls the design.

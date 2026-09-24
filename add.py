@@ -1,18 +1,13 @@
 import re
 import sys
 from html import escape, unescape
-from pathlib import Path
 
-from cf_utils import parse_cf_url, fetch_meta
-
-ROOT = Path(__file__).resolve().parent
-WEEKS = ROOT / "weeks"
+from cf_utils import parse_cf_url, fetch_meta, pick_section, SECTIONS_DIR
 
 
 def existing_ids(html):
-    """Set of (contest_id, index) already present in this week's file,
-    so we catch duplicates even if the link was pasted in a different form
-    (e.g. /contest/.../problem/.. vs /problemset/problem/...)."""
+    """Set of (contest_id, index) already present in a page, so duplicates are
+    caught even if the link was pasted in a different form."""
     ids = set()
     for m in re.finditer(r'<a href="([^"]+)"', html):
         parsed = parse_cf_url(unescape(m.group(1)))
@@ -21,21 +16,25 @@ def existing_ids(html):
     return ids
 
 
-def main():
-    week = sys.argv[1] if len(sys.argv) > 1 else input("Enter week (example: week1): ").strip()
-    if not week.endswith(".html"):
-        week += ".html"
+def find_duplicate(contest_id, index):
+    """Checks ALL sections, so a problem can't sit in both Easy and Hard."""
+    for f in sorted(SECTIONS_DIR.glob("*.html")):
+        if (contest_id, index) in existing_ids(f.read_text(encoding="utf-8")):
+            return f.stem
+    return None
 
-    file = WEEKS / week
-    if not file.exists():
-        print(f"Error: {week} does not exist.")
-        return
 
-    html = file.read_text(encoding="utf-8")
-    print(f"\nAdding problems to {week}")
+def insert_block(html, block):
+    marker = "\n</div>\n<script>"
+    pos = html.rfind(marker)
+    if pos == -1:
+        return None
+    return html[:pos] + "\n" + block + html[pos:]
+
+
+def add_problems(section, file):
+    print(f"\nAdding problems to {section}")
     print('Paste a Codeforces problem link. Type "done" when finished.\n')
-
-    already = existing_ids(html)
     added = 0
 
     while True:
@@ -52,8 +51,9 @@ def main():
             continue
 
         contest_id, index, is_gym = parsed
-        if (contest_id, index) in already:
-            print("This problem is already in this week. Skipped.\n")
+        dup = find_duplicate(contest_id, index)
+        if dup:
+            print(f"This problem is already in '{dup}'. Skipped.\n")
             continue
 
         meta = fetch_meta(contest_id, index, is_gym)
@@ -62,14 +62,12 @@ def main():
             rating = meta.get("rating")
             print(f"   found: {name}" + (f"  (rating {rating})" if rating else ""))
         else:
-            # only asked when auto-detect fails (gym problem, or API unreachable)
             print("   couldn't auto-detect the name — type it in:")
             name = input("   Problem name: ").strip()
             if not name:
                 print("Problem name cannot be empty. Skipped.\n")
                 continue
-            rating_in = input("   Rating (optional, press Enter to skip): ").strip()
-            rating = rating_in or None
+            rating = input("   Rating (optional, press Enter to skip): ").strip() or None
 
         tag = f"{contest_id}{index}"
         rating_html = f' <span class="rating">{escape(str(rating))}</span>' if rating else ""
@@ -84,19 +82,68 @@ def main():
             '</div>\n'
         )
 
-        marker = "\n</div>\n<script>"
-        pos = html.rfind(marker)
-        if pos == -1:
-            print("Could not find the weekly page structure.")
+        html = file.read_text(encoding="utf-8")
+        new_html = insert_block(html, block)
+        if new_html is None:
+            print("Could not find the page structure.")
             return
-
-        html = html[:pos] + "\n" + block + html[pos:]
-        file.write_text(html, encoding="utf-8")
-        already.add((contest_id, index))
+        file.write_text(new_html, encoding="utf-8")
         added += 1
         print(f"✓ Added: {name}\n")
 
-    print(f"Done! Added {added} new problem(s) to {week}.")
+    print(f"Done! Added {added} new problem(s) to {section}.")
+
+
+def add_contests(file):
+    print("\nAdding contests")
+    print('Type a contest number (example: 2030). Type "done" when finished.')
+    print("Add the question + logic later with: python logic.py contests\n")
+    added = 0
+
+    while True:
+        num = input("Contest number: ").strip()
+        if num.lower() == "done":
+            break
+        if not num.isdigit():
+            print("Contest number must be digits only.\n")
+            continue
+
+        html = file.read_text(encoding="utf-8")
+        if f'data-contest="{num}"' in html:
+            again = input(f"Contest {num} already has an entry. Add another? (y/n): ").strip().lower()
+            if again != "y":
+                print("Skipped.\n")
+                continue
+
+        block = (
+            f'<div class="question" data-status="not-solved" data-contest="{num}">\n'
+            '<input type="checkbox">\n'
+            f'<a href="https://codeforces.com/contest/{num}" target="_blank">Question not added yet</a>'
+            f' <span class="contest-badge">Contest {num}</span>\n'
+            '<p>Write your logic here...</p>\n'
+            '<span class="status">NOT SOLVED</span>\n'
+            '</div>\n'
+        )
+
+        new_html = insert_block(html, block)
+        if new_html is None:
+            print("Could not find the page structure.")
+            return
+        file.write_text(new_html, encoding="utf-8")
+        added += 1
+        print(f"✓ Added: Contest {num}\n")
+
+    print(f"Done! Added {added} contest(s).")
+
+
+def main():
+    section, file = pick_section(sys.argv[1] if len(sys.argv) > 1 else None)
+    if not file:
+        return
+    if section == "contests":
+        add_contests(file)
+    else:
+        add_problems(section, file)
 
 
 if __name__ == "__main__":

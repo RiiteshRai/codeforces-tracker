@@ -87,3 +87,25 @@ def fetch_meta(contest_id, index, is_gym):
     if is_gym:
         return None  # gym problems aren't in the public problemset API
     return _fetch_cf_problem_list().get(f"{contest_id}-{index}")
+
+
+# ---------- sections (easy / medium / hard / contests) ----------
+SECTIONS_DIR = ROOT / "sections"
+SECTION_NAMES = ["easy", "medium", "hard", "contests"]
+
+
+def pick_section(arg=None):
+    """Returns (name, path) for a section page, or (None, None) if invalid."""
+    raw = (arg or input("Section (easy / medium / hard / contests): ")).strip().lower()
+    if raw.endswith(".html"):
+        raw = raw[:-5]
+    if raw == "contest":
+        raw = "contests"
+    if raw not in SECTION_NAMES:
+        print(f"Error: section must be one of: {', '.join(SECTION_NAMES)}.")
+        return None, None
+    path = SECTIONS_DIR / f"{raw}.html"
+    if not path.exists():
+        print(f"Error: {path} does not exist.")
+        return None, None
+    return raw, path

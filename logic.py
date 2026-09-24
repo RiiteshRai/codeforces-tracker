@@ -1,12 +1,10 @@
 import sys
 import re
-from pathlib import Path
 from html import unescape, escape
 
-from cf_utils import parse_cf_url
+from cf_utils import parse_cf_url, fetch_meta, pick_section
 
-ROOT = Path(__file__).resolve().parent
-WEEKS = ROOT / "weeks"
+PLACEHOLDER = "Write your logic here..."
 
 
 def set_status_attr(block, status):
@@ -17,14 +15,51 @@ def set_status_attr(block, status):
     return re.sub(r'(<div class="question")', rf'\1 data-status="{status}"', block, count=1)
 
 
-def main():
-    week = sys.argv[1] if len(sys.argv) > 1 else input("Enter week (example: week1): ").strip()
-    if not week.endswith(".html"):
-        week += ".html"
+def label(q):
+    prefix = f"[Contest {q['contest']}] " if q["contest"] else ""
+    return prefix + q["name"] + (f"  [{q['tag']}]" if q["tag"] else "")
 
-    file = WEEKS / week
-    if not file.exists():
-        print(f"Error: {week} does not exist.")
+
+def ask_problem():
+    """Contest section: set/replace the problem inside a contest entry.
+    Returns (url, name, rating, tag) or None to keep the current one."""
+    url = input("\nProblem URL (press Enter to keep current): ").strip()
+    if not url:
+        return None
+    parsed = parse_cf_url(url)
+    if not parsed:
+        print("That doesn't look like a Codeforces problem link. Keeping current.")
+        return None
+
+    contest_id, index, is_gym = parsed
+    meta = fetch_meta(contest_id, index, is_gym)
+    if meta and meta.get("name"):
+        name, rating = meta["name"], meta.get("rating")
+        print(f"   found: {name}" + (f"  (rating {rating})" if rating else ""))
+    else:
+        print("   couldn't auto-detect the name — type it in:")
+        name = input("   Problem name: ").strip()
+        if not name:
+            print("Name cannot be empty. Keeping current.")
+            return None
+        rating = input("   Rating (optional, press Enter to skip): ").strip() or None
+    return url, name, rating, f"{contest_id}{index}"
+
+
+def apply_problem(block, url, name, rating, tag):
+    """Swap the link/name, rating and tag inside a block (contest badge is kept)."""
+    link = f'<a href="{escape(url, quote=True)}" target="_blank">{escape(name)}</a>'
+    block = re.sub(r'<a href="[^"]*" target="_blank">.*?</a>', lambda m: link, block, count=1, flags=re.S)
+    block = re.sub(r'\s*<span class="rating">.*?</span>', "", block, count=1, flags=re.S)
+    block = re.sub(r'\s*<span class="tag">.*?</span>', "", block, count=1, flags=re.S)
+    extra = (f' <span class="rating">{escape(str(rating))}</span>' if rating else "")
+    extra += f' <span class="tag">{escape(tag)}</span>'
+    return block.replace("</a>", "</a>" + extra, 1)
+
+
+def main():
+    section, file = pick_section(sys.argv[1] if len(sys.argv) > 1 else None)
+    if not file:
         return
 
     html = file.read_text(encoding="utf-8")
@@ -37,10 +72,12 @@ def main():
             url = unescape(m.group(1))
             parsed = parse_cf_url(url)
             tag = f"{parsed[0]}{parsed[1]}" if parsed else ""
+            c = re.search(r'data-contest="(\d+)"', block)
             questions.append({
                 "url": url,
                 "name": unescape(re.sub(r"\s+", " ", m.group(2)).strip()),
                 "tag": tag,
+                "contest": c.group(1) if c else "",
                 "block": block
             })
 
@@ -48,11 +85,12 @@ def main():
         print("No problems found.")
         return
 
-    print("\n=== QUESTIONS ===\n")
+    print(f"\n=== {section.upper()} ===\n")
     for i, q in enumerate(questions, 1):
-        print(f"{i}. {q['name']}" + (f"  [{q['tag']}]" if q['tag'] else ""))
+        print(f"{i}. {label(q)}")
 
-    search = input("\nChoose number, name, URL, or tag (e.g. 1985F): ").strip()
+    search = input("\nChoose number, name, URL, tag (e.g. 1985F)" +
+                   (" or contest number" if section == "contests" else "") + ": ").strip()
     selected = None
 
     if search.isdigit() and 1 <= int(search) <= len(questions):
@@ -64,13 +102,14 @@ def main():
             if needle in q["name"].lower()
             or needle in q["url"].lower()
             or needle == q["tag"].lower()
+            or (q["contest"] and needle == q["contest"])
         ]
         if len(matches) == 1:
             selected = matches[0]
         elif len(matches) > 1:
             print("\nMultiple matches:")
             for i, q in enumerate(matches, 1):
-                print(f"{i}. {q['name']}")
+                print(f"{i}. {label(q)}")
             n = input("Choose number: ").strip()
             if n.isdigit() and 1 <= int(n) <= len(matches):
                 selected = matches[int(n) - 1]
@@ -80,8 +119,16 @@ def main():
         return
 
     original = selected["block"]
-    print(f"\nSelected: {selected['name']}")
-    print('Write your logic. Type END on a new line when finished.')
+    base = original
+    print(f"\nSelected: {label(selected)}")
+
+    # contests: first set which question you solved from that contest
+    if section == "contests":
+        problem = ask_problem()
+        if problem:
+            base = apply_problem(original, *problem)
+
+    print('\nWrite your logic. Type END on a new line when finished.')
     print('(Or type CLEAR alone and press END to wipe existing logic.)\n')
 
     lines = []
@@ -91,30 +138,26 @@ def main():
             break
         lines.append(line)
 
-    placeholder = "Write your logic here..."
+    old_p_match = re.search(r"<p>(.*?)</p>", base, re.S)
+    old_text = unescape(old_p_match.group(1)).strip() if old_p_match else ""
 
     if lines == ["CLEAR"]:
-        combined = placeholder
+        combined = PLACEHOLDER
         print("\n✓ Logic cleared.")
     else:
         logic = "\n".join(lines).strip()
         if not logic:
-            print("No logic entered. Nothing changed.")
-            return
-
-        old_p_match = re.search(r"<p>(.*?)</p>", selected["block"], re.S)
-        old_text = unescape(old_p_match.group(1)).strip() if old_p_match else ""
-
-        if old_text and old_text != placeholder:
+            if base == original:
+                print("No logic entered. Nothing changed.")
+                return
+            combined = old_text or PLACEHOLDER  # contest: question set, logic later
+        elif old_text and old_text != PLACEHOLDER:
             combined = old_text + "\n\n---\n\n" + logic
         else:
             combined = logic
 
-    new_block = re.sub(
-        r"<p>.*?</p>",
-        "<p>\n            " + escape(combined).replace("\n", "\n            ") + "\n        </p>",
-        selected["block"], count=1, flags=re.S
-    )
+    replacement = "<p>\n            " + escape(combined).replace("\n", "\n            ") + "\n        </p>"
+    new_block = re.sub(r"<p>.*?</p>", lambda m: replacement, base, count=1, flags=re.S)
 
     if not re.search(r'<span class="rating">.*?</span>', new_block, re.S):
         rating = input("\nRating (optional, press Enter to skip): ").strip()

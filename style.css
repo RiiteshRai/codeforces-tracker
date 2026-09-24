@@ -212,3 +212,29 @@ h1 {
         margin: 8px 0 0 28px
     }
 }
+
+
+/* ---- sections ---- */
+.week.easy { border-left: 6px solid #22c55e }
+.week.medium { border-left: 6px solid #f59e0b }
+.week.hard { border-left: 6px solid #ef4444 }
+.week.contests { border-left: 6px solid #6366f1 }
+
+.contest-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 11px;
+    font-weight: 700
+}
+
+@media(max-width:600px) {
+    .contest-badge {
+        display: block;
+        width: max-content;
+        margin: 8px 0 0 28px
+    }
+}
